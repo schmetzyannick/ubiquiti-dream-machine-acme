@@ -5,7 +5,6 @@ set -eu
 SCRIPT_NAME=${0##*/}
 acme_runtime_dir=
 acme_sh=
-NORMALIZED_ENV_FILE=
 
 log() {
   printf '%s\n' "$*" >&2
@@ -27,28 +26,19 @@ require_env() {
 }
 
 cleanup_runtime() {
-  if [ -n "$NORMALIZED_ENV_FILE" ] && [ -f "$NORMALIZED_ENV_FILE" ]; then
-    rm -f "$NORMALIZED_ENV_FILE"
-  fi
-
   if [ -n "$acme_runtime_dir" ] && [ -d "$acme_runtime_dir" ]; then
     rm -rf "$acme_runtime_dir"
   fi
 }
 
 load_local_env() {
-  prepare_filesystem "$PROJECT_ROOT/config/local.env" "$CERTIFICATES_DIR" "${TMPDIR:-/tmp}/udm-acme.XXXXXX"
-  NORMALIZED_ENV_FILE=$PREPARED_NORMALIZED_ENV_FILE
+  load_local_env_file "$PROJECT_ROOT/config/local.env"
+}
+
+prepare_acme_runtime() {
+  prepare_filesystem "$CERTIFICATES_DIR" "${TMPDIR:-/tmp}/udm-acme.XXXXXX"
   acme_runtime_dir=$PREPARED_ACME_RUNTIME_DIR
   acme_sh=$PREPARED_ACME_SH
-
-  if [ -n "$NORMALIZED_ENV_FILE" ]; then
-    set -a
-    . "$NORMALIZED_ENV_FILE"
-    set +a
-    rm -f "$NORMALIZED_ENV_FILE"
-    NORMALIZED_ENV_FILE=
-  fi
 }
 
 ensure_acme_sh() {
@@ -128,9 +118,11 @@ ACTION=${1:-help}
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 PREPARE_FILESYSTEM_SH=$PROJECT_ROOT/bin/prepare-filesystem.sh
+LOAD_LOCAL_ENV_SH=$PROJECT_ROOT/bin/load-local-env.sh
 CERTIFICATES_DIR=$PROJECT_ROOT/certificates
 
 . "$PREPARE_FILESYSTEM_SH"
+. "$LOAD_LOCAL_ENV_SH"
 
 trap cleanup_runtime EXIT INT TERM
 
@@ -150,6 +142,7 @@ case $ACTION in
 esac
 
 load_local_env
+prepare_acme_runtime
 ensure_acme_sh
 
 case $ACTION in
