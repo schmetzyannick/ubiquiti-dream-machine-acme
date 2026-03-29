@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+config/*.local
+config/*.env
+config/*.secrets
+config/local.*
+certificates/*
+!certificates/.gitkeep
+tmp/
+logs/
+*.log
+*.pem
+*.key
+*.csr
+*.crt
